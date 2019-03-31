@@ -1,0 +1,20 @@
+targets:
+  $default:
+    builders:
+      modux_generator|modux:
+        enabled: true
+
+      source_gen|combining_builder:
+        enabled: true
+        generate_for:
+          exclude: ["**.ms.dart"]
+
+builders:
+  modux:
+    target: ":modux_generator"
+    import: "package:modux_generator/builder.dart"
+    builder_factories: ["modux"]
+    build_extensions: {".dart": [".modux.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
