@@ -67,6 +67,12 @@ class ClassType {
   bool __isModuxActions = false;
   bool _isStateless = false;
   bool _isStateful = false;
+  bool _isCommandDispatcher = false;
+  bool _commandDispatcher = false;
+  bool _isBuiltCommandDispatcher = false;
+  bool _builtCommandDispatcher = false;
+  bool _isNestedBuiltCommandDispatcher = false;
+  bool _nestedBuiltCommandDispatcher = false;
   ClassType _reduxActionsType;
   bool _isActionDispatcher = false;
   bool _isFieldActionDispatcher = false;
@@ -79,10 +85,23 @@ class ClassType {
 
   DartType _stateType;
   DartType _actionsType;
-  DartType _outType;
+
   String _stateName;
   String _builderName;
   String _actionsName;
+
+  DartType _commandType;
+  DartType _commandPayloadType;
+  String _commandName;
+  String _commandBuilderName;
+  String _commandPayloadName;
+  String _commandPayloadBuilderName;
+  DartType _resultType;
+  DartType _resultPayloadType;
+  String _resultName;
+  String _resultBuilderName;
+  String _resultPayloadName;
+  String _resultPayloadBuilderName;
 
   String get displayName =>
       type?.displayName ?? element?.displayName ?? type?.name ?? '';
@@ -138,9 +157,106 @@ class ClassType {
       __isModuxActions = isPackageClass('modux', 'ModuxActions');
       _isStateless = isPackageClass('modux', 'StatelessActions');
       _isStateful = isPackageClass('modux', 'StatefulActions');
+      _isCommandDispatcher = isPackageClass('modux', 'CommandDispatcher');
+      _isBuiltCommandDispatcher =
+          isPackageClass('modux', 'BuiltCommandDispatcher');
+      _isNestedBuiltCommandDispatcher =
+          isPackageClass('modux', 'NestedBuiltCommandDispatcher');
       _isRouteActions = isPackageClass('modux', 'RouteActions');
       _isModelActions = isPackageClass('modux', 'ModelActions');
       _isBuilt = doesImplement('built_value', 'Built');
+
+      if (_isRouteActions) {
+        if (type is InterfaceType) {
+          final args = (type as InterfaceType).typeArguments;
+          _resultType = args[2];
+          _resultName = _resultType.displayName ?? _resultType.name;
+          final index = _resultName.indexOf('<');
+          if (index > -1) {
+            _resultBuilderName = _resultName.substring(0, index) +
+                'Builder' +
+                _resultName.substring(index);
+          } else {
+            _resultBuilderName = '${_resultName}Builder';
+          }
+        }
+      }
+
+      if (_isCommandDispatcher) {
+        if (type is InterfaceType) {
+          final args = (type as InterfaceType).typeArguments;
+          _commandType = args[0];
+//          _resultType = args[1];
+        }
+      }
+
+      if (_isBuiltCommandDispatcher) {
+        if (type is InterfaceType) {
+          final args = (type as InterfaceType).typeArguments;
+          _commandType = args[0];
+          _resultType = args[2];
+
+          {
+            _commandName = _commandType.displayName ?? _commandType.name;
+            final index = _commandName.indexOf('<');
+            if (index > -1) {
+              _commandBuilderName = _commandName.substring(0, index) +
+                  'Builder' +
+                  _commandName.substring(index);
+            } else {
+              _commandBuilderName = '${_commandName}Builder';
+            }
+          }
+
+          {
+            _resultName = _resultType.displayName ?? _resultType.name;
+            final index = _resultName.indexOf('<');
+            if (index > -1) {
+              _resultBuilderName = _resultName.substring(0, index) +
+                  'Builder' +
+                  _resultName.substring(index);
+            } else {
+              _resultBuilderName = '${_resultName}Builder';
+            }
+          }
+        }
+      }
+
+      if (_isNestedBuiltCommandDispatcher) {
+        if (type is InterfaceType) {
+          final args = (type as InterfaceType).typeArguments;
+          _commandPayloadType = args[2];
+          _resultPayloadType = args[6];
+
+          {
+            _commandPayloadName =
+                _commandPayloadType.displayName ?? _commandPayloadType.name;
+            final index = _commandPayloadName.indexOf('<');
+            if (index > -1) {
+              _commandPayloadBuilderName =
+                  _commandPayloadName.substring(0, index) +
+                      'Builder' +
+                      _commandPayloadName.substring(index);
+            } else {
+              _commandPayloadBuilderName = '${_commandPayloadName}Builder';
+            }
+          }
+
+          {
+            _resultPayloadName =
+                _resultPayloadType.displayName ?? _resultPayloadType.name;
+            final index = _resultPayloadName.indexOf('<');
+            if (index > -1) {
+              _resultPayloadBuilderName =
+                  _resultPayloadName.substring(0, index) +
+                      'Builder' +
+                      _resultPayloadName.substring(index);
+            } else {
+              _resultPayloadBuilderName = '${_resultPayloadName}Builder';
+            }
+          }
+        }
+      }
 
       ClassType s = supertype;
       while (s != null) {
@@ -150,9 +266,36 @@ class ClassType {
 
         if (s._isModelActions) _modelActions = true;
 
+        if (s._isCommandDispatcher) {
+          _commandDispatcher = true;
+        }
+
+        if (s._isBuiltCommandDispatcher) {
+          _builtCommandDispatcher = true;
+          _commandName = s._commandName;
+          _commandBuilderName = s._commandBuilderName;
+          _resultType = s._resultType;
+          _resultName = s._resultName;
+          _resultBuilderName = s._resultBuilderName;
+        }
+
+        if (s._isNestedBuiltCommandDispatcher) {
+          _nestedBuiltCommandDispatcher = true;
+          _commandPayloadType = s._commandPayloadType;
+          _commandPayloadName = s._commandPayloadName;
+          _commandPayloadBuilderName = s._commandPayloadBuilderName;
+          _resultPayloadType = s._resultPayloadType;
+          _resultName = s._resultName;
+          _resultBuilderName = s._resultBuilderName;
+          _resultPayloadName = s._resultPayloadName;
+          _resultPayloadBuilderName = s._resultPayloadBuilderName;
+        }
+
         if (s._isRouteActions) {
           _routeActions = true;
-          _outType = s._typeArgAt(2);
+
+          _resultName = s._resultName;
+          _resultBuilderName = s._resultBuilderName;
 
           _moduxActions = true;
           _reduxActionsType = s;
@@ -167,7 +310,6 @@ class ClassType {
             _builderName = '${_stateName}Builder';
           }
 
-          _outType = s._typeArgAt(2);
           _actionsType = s._typeArgAt(3);
           _actionsName = _actionsType.displayName;
         }
@@ -759,6 +901,91 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
       writer.writeln('@override');
       writer.writeln('FullType get '
           '\$fullType => _\$fullType ??= $fullType;');
+    }
+  }
+
+  if (classType._routeActions) {
+    writer.writeln();
+    writer.writeln('@override');
+    writer.writeln('${classType._resultBuilderName} \$newResultBuilder() => '
+        '${classType._resultName}().toBuilder();');
+  }
+
+  if (classType._builtCommandDispatcher) {
+    writer.writeln();
+    writer.writeln('@override');
+    writer.writeln('${classType._commandBuilderName} newCommandBuilder() => '
+        '${classType._commandName}().toBuilder();');
+
+    writer.writeln();
+    writer.writeln('@override');
+    writer.writeln('${classType._resultBuilderName} newResultBuilder() => '
+        '${classType._resultName}().toBuilder();');
+
+    final commandType = classType._commandType;
+    if (commandType != null &&
+        !commandType.isDynamic &&
+        commandType is InterfaceType) {
+      final serializer = commandType?.element?.getGetter('serializer');
+      if (serializer != null) {
+        writer.writeln();
+        writer.writeln('@override');
+        writer.writeln('Serializer<${commandType.name}> get '
+            'commandSerializer => ${commandType.name}.serializer;');
+      }
+    }
+
+    final resultType = classType._resultType;
+    if (resultType != null &&
+        !resultType.isDynamic &&
+        resultType is InterfaceType) {
+      final serializer = resultType?.element?.getGetter('serializer');
+      if (serializer != null) {
+        writer.writeln();
+        writer.writeln('@override');
+        writer.writeln('Serializer<${resultType.name}> get '
+            'resultSerializer => ${resultType.name}.serializer;');
+      }
+    }
+  }
+
+  if (classType._nestedBuiltCommandDispatcher) {
+    writer.writeln();
+    writer.writeln('@override');
+    writer.writeln(
+        '${classType._commandPayloadBuilderName} newCommandPayloadBuilder() => '
+        '${classType._commandPayloadName}().toBuilder();');
+
+    writer.writeln();
+    writer.writeln('@override');
+    writer.writeln(
+        '${classType._resultPayloadBuilderName} newResultPayloadBuilder() => '
+        '${classType._resultPayloadName}().toBuilder();');
+
+    final commandType = classType._commandPayloadType;
+    if (commandType != null &&
+        !commandType.isDynamic &&
+        commandType is InterfaceType) {
+      final serializer = commandType?.element?.getGetter('serializer');
+      if (serializer != null) {
+        writer.writeln();
+        writer.writeln('@override');
+        writer.writeln('Serializer<${commandType.name}> get '
+            'commandPayloadSerializer => ${commandType.name}.serializer;');
+      }
+    }
+
+    final resultType = classType._resultPayloadType;
+    if (resultType != null &&
+        !resultType.isDynamic &&
+        resultType is InterfaceType) {
+      final serializer = resultType?.element?.getGetter('serializer');
+      if (serializer != null) {
+        writer.writeln();
+        writer.writeln('@override');
+        writer.writeln('Serializer<${resultType.name}> get '
+            'resultPayloadSerializer => ${resultType.name}.serializer;');
+      }
     }
   }
 
