@@ -804,7 +804,7 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
       }
 
       writer.writeln(
-          '${prop.name} = \$options.actionField$actionGenerics(\'${_escape(prop.name)}\', '
+          '${prop.name} = \$options.field$actionGenerics(\'${_escape(prop.name)}\', '
           '(a) => a?.${prop.name}, '
           '(s) => s?.${prop.name}, '
           '(p, b) => p?.${prop.name} = '
