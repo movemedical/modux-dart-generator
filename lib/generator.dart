@@ -14,20 +14,35 @@ class ModuxGenerator extends Generator {
   Future<String> generate(LibraryReader library, BuildStep buildStep) async {
     final result = new StringBuffer();
 
-    var hasWrittenHeaders = false;
-    for (final element in library.allElements) {
-      if (_needsModuxActions(element) && element is ClassElement) {
-        if (!hasWrittenHeaders) {
-          hasWrittenHeaders = true;
-          result.writeln(_lintIgnores);
+    try {
+      var hasWrittenHeaders = false;
+      for (final element in library.allElements) {
+        if (_needsModuxActions(element) && element is ClassElement) {
+          if (!hasWrittenHeaders) {
+            hasWrittenHeaders = true;
+            result.writeln(_lintIgnores);
+          }
+          log.info('Generating action classes for ${element.name}');
+          result.writeln(_generateActions(element));
         }
-        log.info('Generating action classes for ${element.name}');
-        result.writeln(_generateActions(element));
       }
+    } catch (e, stackTrace) {
+      print(e);
+      print(stackTrace);
+      return '/*\n'
+          '${e?.toString()}\n'
+          '$stackTrace'
+          '*/';
     }
 
     return result.toString();
   }
+}
+
+String _cleanFullName(String fullName) {
+  if (fullName == null) return '';
+  if (fullName.startsWith('/')) fullName = fullName.substring(1);
+  return fullName.replaceFirst('/lib/', '/').replaceFirst('|lib/', '/');
 }
 
 const _statefulModuxActionsName = 'StatefulActionsOptions';
@@ -89,6 +104,7 @@ class ClassType {
   String _stateName;
   String _builderName;
   String _actionsName;
+  String _fullName;
 
   DartType _commandType;
   DartType _commandPayloadType;
@@ -152,6 +168,7 @@ class ClassType {
     if (element == null) {
       __isModuxActions = false;
     } else {
+      _fullName = _cleanFullName(element?.source?.fullName);
       _isActionDispatcher = isPackageClass('modux', 'ActionDispatcher');
       _isFieldActionDispatcher = isPackageClass('modux', 'FieldDispatcher');
       __isModuxActions = isPackageClass('modux', 'ModuxActions');
@@ -436,26 +453,26 @@ class ClassType {
     if (element == null) return false;
     final s = element.source;
     if (s == null) return false;
-    return s.fullName.startsWith('$packageName|') &&
+    return _fullName.startsWith('$packageName/') &&
         _removeGenerics(element.name) == className;
   }
 
-  static bool isPackage(String packageName, InterfaceType t) {
+  bool isPackage(String packageName, InterfaceType t) {
     if (t == null || packageName == null || packageName.isEmpty) return false;
 
-    final element = t.element;
-    if (element == null) return false;
-    final s = element.source;
-    if (s == null) return false;
+//    final element = t.element;
+//    if (element == null) return false;
+//    final s = element.source;
+//    if (s == null) return false;
+//
+//    var fullName = _cleanFullName(s.fullName);
+//    if (fullName.startsWith('asset:')) {
+//      fullName = fullName.substring('asset:'.length);
+//    } else if (fullName.startsWith('package:')) {
+//      fullName = fullName.substring('package:'.length);
+//    }
 
-    var fullName = s.fullName;
-    if (fullName.startsWith('asset:')) {
-      fullName = fullName.substring('asset:'.length);
-    } else if (fullName.startsWith('package:')) {
-      fullName = fullName.substring('package:'.length);
-    }
-
-    return fullName.startsWith(packageName);
+    return _fullName.startsWith('$packageName/');
   }
 
   void forEachProperty(void fn(ClassType enclosing, ClassProperty prop),
@@ -877,23 +894,6 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
   }
 
   if (classType.isStateful) {
-    try {
-      final stateType = classType._stateType;
-      if (stateType != null &&
-          !stateType.isDynamic &&
-          stateType is InterfaceType) {
-        final serializer = stateType?.element?.getGetter('serializer');
-        final serializerTypeName =
-            _removeGenerics(classType.stateName) + classType.parameterizedName;
-        if (serializer != null) {
-          writer.writeln();
-          writer.writeln('// @override');
-          writer.writeln('// Serializer<$serializerTypeName> get '
-              '\$serializer => $serializerTypeName.serializer;');
-        }
-      }
-    } catch (e) {}
-
     final fullType = _toFullType(classType.stateName);
     if (fullType != null && fullType.isNotEmpty) {
       writer.writeln();
