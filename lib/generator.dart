@@ -396,12 +396,12 @@ class ClassType {
   }
 
   String get reducerTypeName =>
-      _superMethod(type, '\$reducer')?.parameters?.first?.type?.name ??
+      _superMethod(type, 'reducer\$')?.parameters?.first?.type?.name ??
       'ReducerBuilder';
 
   String get middlewareTypeName =>
-      _superMethod(type, '\$middleware')?.parameters?.first?.type?.name ??
-      'MiddlwareBuilder';
+      _superMethod(type, 'middleware\$')?.parameters?.first?.type?.name ??
+      'MiddlewareBuilder';
 
   bool get isModuxActions => _moduxActions;
 
@@ -756,7 +756,7 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
   writer.writeln(
       'class _\$${classType.type.displayName} extends ${classType.type.displayName} {');
 
-  writer.writeln('final $optionsClass \$options;');
+  writer.writeln('final $optionsClass options\$;');
 
   writer.writeln();
   classType.forEachProperty((enclosing, prop) {
@@ -768,14 +768,14 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
   int fieldActionCount = 0;
 
   writer.writeln();
-  writer.writeln('_\$${element.name}._(this.\$options) : ');
+  writer.writeln('_\$${element.name}._(this.options\$) : ');
   classType.forEachProperty((enclosing, prop) {
     if (prop.isModuxActions) {
       nestedCount++;
       if (prop.isStateless) {
         final mapper = '(a) => a.${prop.name}';
         writer.writeln(
-            '${prop.name} = ${prop.displayName}(() => \$options.stateless<'
+            '${prop.name} = ${prop.displayName}(() => options\$.stateless<'
             '${prop.type.actionsName}>(\'${_escape(prop.name)}\', $mapper)),');
       } else if (prop.isStateful) {
         final mapper = '(a) => a.${prop.name}';
@@ -785,7 +785,7 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
             '(parent, builder) => parent?.${prop.name} = builder';
 
         writer.writeln(
-            '${prop.name} = ${prop.displayName}(() => \$options.stateful<'
+            '${prop.name} = ${prop.displayName}(() => options\$.stateful<'
             '${prop.stateDisplayName}, '
             '${prop.builderDisplayName}, '
             '${prop.displayName}'
@@ -804,7 +804,7 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
       }
 
       writer.writeln(
-          '${prop.name} = \$options.field$actionGenerics(\'${_escape(prop.name)}\', '
+          '${prop.name} = options\$.field$actionGenerics(\'${_escape(prop.name)}\', '
           '(a) => a?.${prop.name}, '
           '(s) => s?.${prop.name}, '
           '(p, b) => p?.${prop.name} = '
@@ -816,7 +816,7 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
       if (index > -1) {
         actionGenerics = prop.displayName.substring(index);
       }
-      writer.writeln('${prop.name} = \$options.action$actionGenerics'
+      writer.writeln('${prop.name} = options\$.action$actionGenerics'
           '(\'${_escape(prop.name)}\', (a) => a?.${prop.name}),');
     }
   });
@@ -827,25 +827,25 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
       'factory _\$${element.name}($implOptionsName options) => _\$${element.name}._(options());');
 
   if (classType.isStateful) {
-    final getter = element.getGetter('\$initial');
+    final getter = element.getGetter('initialState\$');
     if (getter == null || getter.isAbstract) {
       writer.writeln();
       writer.writeln('@override');
-      writer.writeln('$stateType get \$initial => $stateType();');
+      writer.writeln('$stateType get initialState\$ => $stateType();');
     }
 
     writer.writeln();
     writer.writeln('@override');
     writer.writeln(
-        '${classType.builderName} \$newBuilder() => ${classType.builderName}();');
+        '${classType.builderName} newBuilder\$() => ${classType.builderName}();');
   }
 
   if (nestedCount > 0) {
     writer.writeln();
-    writer.writeln('BuiltList<ModuxActions> _\$nested;');
+    writer.writeln('BuiltList<ModuxActions> _nested\$;');
     writer.writeln('@override');
     writer.writeln(
-        'BuiltList<ModuxActions> get \$nested => _\$nested ??= BuiltList<ModuxActions>([');
+        'BuiltList<ModuxActions> get nested\$ => _nested\$ ??= BuiltList<ModuxActions>([');
     classType.forEachProperty((enclosing, prop) {
       if (prop.isModuxActions) {
         writer.writeln('this.${prop.name},');
@@ -856,10 +856,10 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
 
   if (actionCount > 0 || fieldActionCount > 0) {
     writer.writeln();
-    writer.writeln('BuiltList<ActionDispatcher> _\$actions;');
+    writer.writeln('BuiltList<ActionDispatcher> _actions\$;');
     writer.writeln('@override');
     writer.writeln(
-        'BuiltList<ActionDispatcher> get \$actions => _\$actions ??= BuiltList<ActionDispatcher>([');
+        'BuiltList<ActionDispatcher> get actions\$ => _actions\$ ??= BuiltList<ActionDispatcher>([');
     classType.forEachProperty((enclosing, prop) {
       if (prop.isActionDispatcher || prop.isFieldActionDispatcher) {
         writer.writeln('this.${prop.name},');
@@ -871,11 +871,11 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
   if (nestedCount > 0 || fieldActionCount > 0) {
     writer.writeln();
     writer.writeln('@override');
-    writer.writeln('void \$reducer(${classType.reducerTypeName} reducer) {');
-    writer.writeln('super.\$reducer(reducer);');
+    writer.writeln('void reducer\$(${classType.reducerTypeName} reducer) {');
+    writer.writeln('super.reducer\$(reducer);');
     classType.forEachProperty((enclosing, prop) {
       if (prop.isModuxActions || prop.isFieldActionDispatcher) {
-        writer.writeln('${prop.name}.\$reducer(reducer);');
+        writer.writeln('${prop.name}.reducer\$(reducer);');
       }
     });
     writer.writeln('}');
@@ -883,31 +883,31 @@ String _stateActionsDispatcherTemplate(ClassElement element) {
     writer.writeln();
     writer.writeln('@override');
     writer.writeln(
-        'void \$middleware(${classType.middlewareTypeName} middleware) {');
-    writer.writeln('super.\$middleware(middleware);');
+        'void middleware\$(${classType.middlewareTypeName} middleware) {');
+    writer.writeln('super.middleware\$(middleware);');
     classType.forEachProperty((enclosing, prop) {
       if (prop.isModuxActions) {
-        writer.writeln('${prop.name}.\$middleware(middleware);');
+        writer.writeln('${prop.name}.middleware\$(middleware);');
       }
     });
     writer.writeln('}');
   }
 
-  if (classType.isStateful) {
-    final fullType = _toFullType(classType.stateName);
-    if (fullType != null && fullType.isNotEmpty) {
-      writer.writeln();
-      writer.writeln('FullType _\$fullType;');
-      writer.writeln('@override');
-      writer.writeln('FullType get '
-          '\$fullType => _\$fullType ??= $fullType;');
-    }
-  }
+//  if (classType.isStateful) {
+//    final fullType = _toFullType(classType.stateName);
+//    if (fullType != null && fullType.isNotEmpty) {
+//      writer.writeln();
+//      writer.writeln('FullType _\$fullType;');
+//      writer.writeln('@override');
+//      writer.writeln('FullType get '
+//          '\$fullType => _\$fullType ??= $fullType;');
+//    }
+//  }
 
   if (classType._routeActions) {
     writer.writeln();
     writer.writeln('@override');
-    writer.writeln('${classType._resultBuilderName} \$newResultBuilder() => '
+    writer.writeln('${classType._resultBuilderName} newResultBuilder\$() => '
         '${classType._resultName}().toBuilder();');
   }
 
